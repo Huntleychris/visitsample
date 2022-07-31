@@ -1,24 +1,6 @@
---Select DATEPART(QQ  , Getdate()) as DayOfMonthValue
---Select CONVERT (char(8),Getdate(),112) 
+DROP TABLE IF EXISTS [dbo].[datedimension]
 
---DATEPART(DW, @CurrentDate)
---Select CONVERT (char(10),Getdate(),103) 
---select DATENAME(DW, '16-aug-2013') AS DayName
---select DATEPART(DW, '16-aug-2013') AS DayNumber
-
---select DATEPART(WW, '16-aug-2013') AS WeekOfYear
-/**** Created and Modified by Mubin M. SHaikh *********/
---BEGIN TRY
---	DROP TABLE [dbo].[DimDate]
---END TRY
-
---BEGIN CATCH
---	/*No Action*/
---END CATCH
-
-/**********************************************************************************/
-
-CREATE TABLE	[dbo].[DimDate]
+CREATE TABLE	[dbo].[datedimension]
 	(	[DateKey] INT primary key, 
 		[Date] DATETIME,
 		[FullDateUK] CHAR(10), -- Date in dd-MM-yyyy format
@@ -153,7 +135,7 @@ BEGIN
 
 /* Populate Your Dimension Table with values*/
 	
-	INSERT INTO [dbo].[DimDate]
+	INSERT INTO [dbo].[datedimension]
 	SELECT
 		
 		CONVERT (char(8),@CurrentDate,112) as DateKey,
@@ -238,45 +220,45 @@ END
 /*Add HOLIDAYS UK*/
 	
 -- Good Friday  April 18 
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Good Friday'
 	WHERE [Month] = 4 AND [DayOfMonth]  = 18
 -- Easter Monday  April 21 
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Easter Monday'
 	WHERE [Month] = 4 AND [DayOfMonth]  = 21
 -- Early May Bank Holiday   May 5 
-   UPDATE [dbo].[DimDate]
+   UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Early May Bank Holiday'
 	WHERE [Month] = 5 AND [DayOfMonth]  = 5
 -- Spring Bank Holiday  May 26 
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Spring Bank Holiday'
 	WHERE [Month] = 5 AND [DayOfMonth]  = 26
 -- Summer Bank Holiday  August 25 
-    UPDATE [dbo].[DimDate]
+    UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Summer Bank Holiday'
 	WHERE [Month] = 8 AND [DayOfMonth]  = 25
 -- Boxing Day  December 26  	
-    UPDATE [dbo].[DimDate]
+    UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Boxing Day'
 	WHERE [Month] = 12 AND [DayOfMonth]  = 26	
 --CHRISTMAS
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUK = 'Christmas Day'
 	WHERE [Month] = 12 AND [DayOfMonth]  = 25
 --New Years Day
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUK  = 'New Year''s Day'
 	WHERE [Month] = 1 AND [DayOfMonth] = 1
 	
-	UPDATE [dbo].[DimDate] 
+	UPDATE [dbo].[datedimension] 
 	SET IsHolidayUK = CASE WHEN HolidayUK IS NULL THEN 0 WHEN HolidayUK IS NOT NULL THEN 1 END 
 
 
 	/*Add HOLIDAYS USA*/
 	/*THANKSGIVING - Fourth THURSDAY in November*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Thanksgiving Day'
 	WHERE
 		[Month] = 11 
@@ -284,30 +266,30 @@ END
 		AND DayOfWeekInMonth = 4
 
 	/*CHRISTMAS*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Christmas Day'
 		
 	WHERE [Month] = 12 AND [DayOfMonth]  = 25
 
 	/*4th of July*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Independance Day'
 	WHERE [Month] = 7 AND [DayOfMonth] = 4
 
 	/*New Years Day*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'New Year''s Day'
 	WHERE [Month] = 1 AND [DayOfMonth] = 1
 
 	/*Memorial Day - Last Monday in May*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Memorial Day'
-	FROM [dbo].[DimDate]
+	FROM [dbo].[datedimension]
 	WHERE DateKey IN 
 		(
 		SELECT
 			MAX(DateKey)
-		FROM [dbo].[DimDate]
+		FROM [dbo].[datedimension]
 		WHERE
 			[MonthName] = 'May'
 			AND [DayOfWeekUSA]  = 'Monday'
@@ -317,14 +299,14 @@ END
 		)
 
 	/*Labor Day - First Monday in September*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Labor Day'
-	FROM [dbo].[DimDate]
+	FROM [dbo].[datedimension]
 	WHERE DateKey IN 
 		(
 		SELECT
 			MIN(DateKey)
-		FROM [dbo].[DimDate]
+		FROM [dbo].[datedimension]
 		WHERE
 			[MonthName] = 'September'
 			AND [DayOfWeekUSA] = 'Monday'
@@ -334,21 +316,21 @@ END
 		)
 
 	/*Valentine's Day*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Valentine''s Day'
 	WHERE
 		[Month] = 2 
 		AND [DayOfMonth] = 14
 
 	/*Saint Patrick's Day*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Saint Patrick''s Day'
 	WHERE
 		[Month] = 3
 		AND [DayOfMonth] = 17
 
 	/*Martin Luthor King Day - Third Monday in January starting in 1983*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Martin Luthor King Jr Day'
 	WHERE
 		[Month] = 1
@@ -357,7 +339,7 @@ END
 		AND DayOfWeekInMonth = 3
 
 	/*President's Day - Third Monday in February*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'President''s Day'
 	WHERE
 		[Month] = 2
@@ -365,7 +347,7 @@ END
 		AND DayOfWeekInMonth = 3
 
 	/*Mother's Day - Second Sunday of May*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Mother''s Day'
 	WHERE
 		[Month] = 5
@@ -373,7 +355,7 @@ END
 		AND DayOfWeekInMonth = 2
 
 	/*Father's Day - Third Sunday of June*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Father''s Day'
 	WHERE
 		[Month] = 6
@@ -381,7 +363,7 @@ END
 		AND DayOfWeekInMonth = 3
 
 	/*Halloween 10/31*/
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET HolidayUSA = 'Halloween'
 	WHERE
 		[Month] = 10
@@ -396,7 +378,7 @@ END
 			DateKey,
 			[Year],
 			[DayOfMonth] 
-		FROM [dbo].[DimDate]
+		FROM [dbo].[datedimension]
 		WHERE
 			[Month] = 11
 			AND [DayOfWeekUSA] = 'Monday'
@@ -440,15 +422,15 @@ END
 			SELECT @CURRENTYEAR = @CURRENTYEAR + 1
 		END
 
-		UPDATE [dbo].[DimDate]
+		UPDATE [dbo].[datedimension]
 			SET HolidayUSA  = 'Election Day'				
-		FROM [dbo].[DimDate] DT
+		FROM [dbo].[datedimension] DT
 			JOIN @Holidays HL ON (HL.DateID + 1) = DT.DateKey
 		WHERE
 			[Week] = 1
 	END
 	
-	UPDATE [dbo].[DimDate]
+	UPDATE [dbo].[datedimension]
 		SET IsHolidayUSA = CASE WHEN HolidayUSA  IS NULL THEN 0 WHEN HolidayUSA  IS NOT NULL THEN 1 END
 
 /*******************************************************************************************************************************************************/
@@ -460,11 +442,11 @@ END
 --Script 2 fiscal calendar setting in Date dimension
 /*******************************************************************************************************************************************************/
 		
-SELECT * FROM [dbo].[DimDate]
+SELECT * FROM [dbo].[datedimension]
 
 
 /*Add Fiscal date columns to DimDate*/
-ALTER TABLE [dbo].[DimDate] ADD
+ALTER TABLE [dbo].[datedimension] ADD
 	[FiscalDayOfYear] VARCHAR(3),
 	[FiscalWeekOfYear] VARCHAR(3),
 	[FiscalMonth] VARCHAR(2), 
@@ -719,7 +701,7 @@ SET
 
 /*******************************************************************************************************************************************************/
 
-UPDATE [dbo].[DimDate]
+UPDATE [dbo].[datedimension]
 	SET
 	FiscalDayOfYear = a.FiscalDayOfYear
 	, FiscalWeekOfYear = a.FiscalWeekOfYear
@@ -737,10 +719,10 @@ UPDATE [dbo].[DimDate]
 	, FiscalFirstDayOfYear = a.FiscalFirstDayOfYear
 	, FiscalLastDayOfYear = a.FiscalLastDayOfYear
 FROM @tb a
-	INNER JOIN [dbo].[DimDate] b ON a.PeriodDate = b.[Date]
+	INNER JOIN [dbo].[datedimension] b ON a.PeriodDate = b.[Date]
 
 /*******************************************************************************************************************************************************/
 
 SELECT 
 	*
-FROM [dbo].[DimDate]
+FROM [dbo].[datedimension]

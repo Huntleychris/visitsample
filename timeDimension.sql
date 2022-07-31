@@ -12,7 +12,9 @@ GO
 SET ANSI_PADDING ON
 GO
 
-CREATE TABLE [dbo].[DimTime](
+DROP TABLE IF EXISTS [dbo].[TimeDimension]
+
+CREATE TABLE [dbo].[TimeDimension](
 	[TimeKey] [int] NOT NULL,
 	[TimeAltKey] [int] NOT NULL,
 	[Time30] [varchar](8) NOT NULL,
@@ -23,7 +25,7 @@ CREATE TABLE [dbo].[DimTime](
 	[HourlyBucket] varchar(15)not null,
 	[DayTimeBucketGroupKey] int not null,
 	[DayTimeBucket] varchar(100) not null
- CONSTRAINT [PK_DimTime] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_TimeDimension] PRIMARY KEY CLUSTERED 
  (
  [TimeKey] ASC
  )
@@ -43,7 +45,7 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE PROCEDURE [dbo].[FillDimTime]
+CREATE PROCEDURE [dbo].[FillTimeDimension]
 as
 BEGIN
 
@@ -145,7 +147,7 @@ BEGIN
          END 
       --    print   @DayTimeBucket    
 	  
-	    INSERT into  DimTime (TimeKey,TimeAltKey,[Time30] ,[Hour30] ,[MinuteNumber],[SecondNumber],[TimeInSecond],[HourlyBucket],DayTimeBucketGroupKey,DayTimeBucket) 
+	    INSERT into  TimeDimension (TimeKey,TimeAltKey,[Time30] ,[Hour30] ,[MinuteNumber],[SecondNumber],[TimeInSecond],[HourlyBucket],DayTimeBucketGroupKey,DayTimeBucket) 
 	    VALUES (@k,@TimeAltKey ,@Time30 ,@hour ,@minute,@Second , @TimeInSeconds,@HourBucket,@DayTimeBucketGroupKey,@DayTimeBucket )
 	    
 	    SET @second  = @second + 1		
@@ -163,7 +165,7 @@ END
 
 Go
 
-Exec [FillDimTime]
+Exec [FillTimeDimension]
 go
 
-select * from DimTime --where MinuteNumber =59 and SecondNumber =59
+select * from TimeDimension --where MinuteNumber =59 and SecondNumber =59
