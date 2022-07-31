@@ -68,8 +68,8 @@ GO
 --Specify Start Date and End date here
 --Value of Start Date Must be Less than Your End Date 
 
-DECLARE @StartDate DATETIME = '01/01/2021' --Starting value of Date Range
-DECLARE @EndDate DATETIME = '01/01/2023' --End Value of Date Range
+DECLARE @StartDate DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-365), 0) --Starting value of Date Range Jan 1 the year prior to this one
+DECLARE @EndDate DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()+720), 365) --End Value of Date Range Jan 1 2 years in the future
 
 --Temporary Variables To Hold the Values During Processing of Each Date of Year
 DECLARE
@@ -625,8 +625,10 @@ go
 
 /*******************************************************************************************************************************************************/
 --GET ALL THE TABLE DATA
-SELECT 
-	*
-FROM [dbo].[datedimension]
+SELECT COUNT(*) as datecount FROM [dbo].[datedimension]
+SELECT * FROM [dbo].[datedimension] WHERE DateKey=(SELECT min(DateKey) FROM [dbo].[datedimension]);
+SELECT * FROM [dbo].[datedimension] WHERE DateKey=(SELECT max(DateKey) FROM [dbo].[datedimension]);
 
-SELECT * FROM [dbo].[TimeDimension]
+SELECT COUNT(*) as timecount FROM [dbo].[TimeDimension]
+SELECT * FROM [dbo].[TimeDimension] WHERE TimeKey=(SELECT min(TimeKey) FROM [dbo].[TimeDimension]);
+SELECT * FROM [dbo].[TimeDimension] WHERE TimeKey=(SELECT max(TimeKey) FROM [dbo].[TimeDimension]);
