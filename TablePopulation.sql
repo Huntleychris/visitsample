@@ -23,4 +23,4 @@ INSERT INTO dbo.person (lastinitial, firstinitial, DOB)
 VALUES (@lastinitial, @firstinitial, @dateModified)
 END
 
-SELECT TOP 10 * FROM [dbo].[person]
+SELECT TOP 100 * FROM [dbo].[person]
