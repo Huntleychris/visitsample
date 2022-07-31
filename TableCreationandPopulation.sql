@@ -13,13 +13,48 @@ DROP TABLE IF EXISTS [dbo].[datedimension]
 DROP TABLE IF EXISTS [dbo].[TimeDimension]
 DROP PROC IF EXISTS [dbo].[FillDateDimension]
 DROP PROC IF EXISTS [dbo].[FillTimeDimension]
+DROP TABLE IF EXISTS [dbo].[visitinfo]
+DROP TABLE IF EXISTS [dbo].[orders]
+DROP TABLE IF EXISTS [dbo].[person]
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+--TABLE CREATION AREA
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 
+--CREATE PERSON TABLE
+CREATE TABLE 
+person 
+(personid int identity (1000000,1) not null primary key, 
+firstinitial char(1) ,
+lastinitial char(1),
+DOB date, 
+)
 
+
+--CREATE ORDER TABLE
+CREATE TABLE 
+orders 
+(orderid int identity (1000000,1) not null primary key, 
+personid int ,
+ordertype varchar(100),
+startdate date,
+starttime time
+)
 /*******************************************************************************************************************************************************/
+--Create Visit Info Table
+
+CREATE TABLE 
+visitinfo 
+(visitid int identity (1000000,1) not null primary key, 
+personid int,
+visitstartdatetime datetime, 
+visitenddatetime datetime)
+
+
 --CREATE DATE DIMENSION
 /*******************************************************************************************************************************************************/
+
 
 
 
@@ -67,6 +102,9 @@ GO
 /********************************************************************************************/
 --Specify Start Date and End date here
 --Value of Start Date Must be Less than Your End Date 
+--This sets up the table boundaries.  
+--The @startdate is Jan 1 of the previous year and this is maintained by the -365.  If you only want this year set it to 0
+ --The @enddate is Jan 1 two years into the future this is the +720  Reducing this will get you into other years as desired
 
 DECLARE @StartDate DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-365), 0) --Starting value of Date Range Jan 1 the year prior to this one
 DECLARE @EndDate DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()+720), 365) --End Value of Date Range Jan 1 2 years in the future
@@ -234,11 +272,6 @@ BEGIN
 
 	SET @CurrentDate = DATEADD(DD, 1, @CurrentDate)
 END
-
-
-
-
-
 
 /*Add HOLIDAYS UK*/
 	
@@ -622,9 +655,25 @@ Go
 
 Exec [FillTimeDimension]
 go
-
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*************************************          VALIDATION AREA          *******************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 --GET ALL THE TABLE DATA
+
+SELECT COUNT(*) as VisitCount FROM [dbo].[visitinfo]
+SELECT COUNT(*) as personcount FROM [dbo].[person]
+SELECT COUNT(*) as orderscount FROM [dbo].[orders]
+
 SELECT COUNT(*) as datecount FROM [dbo].[datedimension]
 SELECT * FROM [dbo].[datedimension] WHERE DateKey=(SELECT min(DateKey) FROM [dbo].[datedimension]);
 SELECT * FROM [dbo].[datedimension] WHERE DateKey=(SELECT max(DateKey) FROM [dbo].[datedimension]);
@@ -632,3 +681,4 @@ SELECT * FROM [dbo].[datedimension] WHERE DateKey=(SELECT max(DateKey) FROM [dbo
 SELECT COUNT(*) as timecount FROM [dbo].[TimeDimension]
 SELECT * FROM [dbo].[TimeDimension] WHERE TimeKey=(SELECT min(TimeKey) FROM [dbo].[TimeDimension]);
 SELECT * FROM [dbo].[TimeDimension] WHERE TimeKey=(SELECT max(TimeKey) FROM [dbo].[TimeDimension]);
+
