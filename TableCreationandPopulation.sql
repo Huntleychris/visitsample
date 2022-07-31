@@ -4,22 +4,35 @@ SET QUOTED_IDENTIFIER ON
 GO
 SET ANSI_PADDING ON
 GO
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+
+--PREP AND CLEANUP
+
+DROP TABLE IF EXISTS [dbo].[datedimension]
+DROP TABLE IF EXISTS [dbo].[TimeDimension]
+DROP PROC IF EXISTS [dbo].[FillDateDimension]
+DROP PROC IF EXISTS [dbo].[FillTimeDimension]
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+
 
 /*******************************************************************************************************************************************************/
 --CREATE DATE DIMENSION
 /*******************************************************************************************************************************************************/
 
 
-DROP TABLE IF EXISTS [dbo].[datedimension]
 
 CREATE TABLE	[dbo].[datedimension]
 	(	[DateKey] INT primary key, 
 		[Date] DATETIME,
+		[FullDateUK] CHAR(10), -- Date in dd-MM-yyyy format
 		[FullDateUSA] CHAR(10),-- Date in MM-dd-yyyy format
 		[DayOfMonth] VARCHAR(2), -- Field will hold day number of Month
 		[DaySuffix] VARCHAR(4), -- Apply suffix as 1st, 2nd ,3rd etc
 		[DayName] VARCHAR(9), -- Contains name of the day, Sunday, Monday 
 		[DayOfWeekUSA] CHAR(1),-- First Day Sunday=1 and Saturday=7
+		[DayOfWeekUK] CHAR(1),-- First Day Monday=1 and Sunday=7
 		[DayOfWeekInMonth] VARCHAR(2), --1st Monday or 2nd Monday in Month
 		[DayOfWeekInYear] VARCHAR(2),
 		[DayOfQuarter] VARCHAR(3),
@@ -45,6 +58,8 @@ CREATE TABLE	[dbo].[datedimension]
 		[IsHolidayUSA] BIT,-- Flag 1=National Holiday, 0-No National Holiday
 		[IsWeekday] BIT,-- 0=Week End ,1=Week Day
 		[HolidayUSA] VARCHAR(50),--Name of Holiday in US
+		[IsHolidayUK] BIT Null, -- Flag 1=National Holiday, 0-No National Holiday
+		[HolidayUK] VARCHAR(50) Null --Name of Holiday in UK
 	)
 GO
 
@@ -148,6 +163,7 @@ BEGIN
 		
 		CONVERT (char(8),@CurrentDate,112) as DateKey,
 		@CurrentDate AS Date,
+		CONVERT (char(10),@CurrentDate,103) as FullDateUK,
 		CONVERT (char(10),@CurrentDate,101) as FullDateUSA,
 		DATEPART(DD, @CurrentDate) AS DayOfMonth,
 		--Apply Suffix values like 1st, 2nd 3rd etc..
@@ -161,6 +177,18 @@ BEGIN
 		
 		DATENAME(DW, @CurrentDate) AS DayName,
 		DATEPART(DW, @CurrentDate) AS DayOfWeekUSA,
+		-- check for day of week as Per US and change it as per UK format 
+		CASE DATEPART(DW, @CurrentDate)
+			WHEN 1 THEN 7
+			WHEN 2 THEN 1
+			WHEN 3 THEN 2
+			WHEN 4 THEN 3
+			WHEN 5 THEN 4
+			WHEN 6 THEN 5
+			WHEN 7 THEN 6
+			END 
+			AS DayOfWeekUK,
+		
 		@DayOfWeekInMonth AS DayOfWeekInMonth,
 		@DayOfWeekInYear AS DayOfWeekInYear,
 		@DayOfQuarter AS DayOfQuarter,
@@ -207,6 +235,48 @@ BEGIN
 	SET @CurrentDate = DATEADD(DD, 1, @CurrentDate)
 END
 
+
+
+
+
+
+/*Add HOLIDAYS UK*/
+	
+-- Good Friday  April 18 
+	UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Good Friday'
+	WHERE [Month] = 4 AND [DayOfMonth]  = 18
+-- Easter Monday  April 21 
+	UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Easter Monday'
+	WHERE [Month] = 4 AND [DayOfMonth]  = 21
+-- Early May Bank Holiday   May 5 
+   UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Early May Bank Holiday'
+	WHERE [Month] = 5 AND [DayOfMonth]  = 5
+-- Spring Bank Holiday  May 26 
+	UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Spring Bank Holiday'
+	WHERE [Month] = 5 AND [DayOfMonth]  = 26
+-- Summer Bank Holiday  August 25 
+    UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Summer Bank Holiday'
+	WHERE [Month] = 8 AND [DayOfMonth]  = 25
+-- Boxing Day  December 26  	
+    UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Boxing Day'
+	WHERE [Month] = 12 AND [DayOfMonth]  = 26	
+--CHRISTMAS
+	UPDATE [dbo].[datedimension]
+		SET HolidayUK = 'Christmas Day'
+	WHERE [Month] = 12 AND [DayOfMonth]  = 25
+--New Years Day
+	UPDATE [dbo].[datedimension]
+		SET HolidayUK  = 'New Year''s Day'
+	WHERE [Month] = 1 AND [DayOfMonth] = 1
+	
+	UPDATE [dbo].[datedimension] 
+	SET IsHolidayUK = CASE WHEN HolidayUK IS NULL THEN 0 WHEN HolidayUK IS NOT NULL THEN 1 END 
 
 
 	/*Add HOLIDAYS USA*/
@@ -389,12 +459,300 @@ END
 /*******************************************************************************************************************************************************/
 
 
+--select * from DimDate 
+
+
+--Script 2 fiscal calendar setting in Date dimension
+/*******************************************************************************************************************************************************/
+
+
+/*Add Fiscal date columns to Date Dimension*/
+ALTER TABLE [dbo].[datedimension] ADD
+	[FiscalDayOfYear] VARCHAR(3),
+	[FiscalWeekOfYear] VARCHAR(3),
+	[FiscalMonth] VARCHAR(2), 
+	[FiscalQuarter] CHAR(1),
+	[FiscalQuarterName] VARCHAR(9),
+	[FiscalYear] CHAR(4),
+	[FiscalYearName] CHAR(7),
+	[FiscalMonthYear] CHAR(10),
+	[FiscalMMYYYY] CHAR(6),
+	[FiscalFirstDayOfMonth] DATE,
+	[FiscalLastDayOfMonth] DATE,
+	[FiscalFirstDayOfQuarter] DATE,
+	[FiscalLastDayOfQuarter] DATE,
+	[FiscalFirstDayOfYear] DATE,
+	[FiscalLastDayOfYear] DATE
+	
+	GO
+
+/*******************************************************************************************************************************************************
+The following section needs to be populated for defining the fiscal calendar
+*******************************************************************************************************************************************************/
+
+DECLARE
+	@dtFiscalYearStart SMALLDATETIME = 'January 01, 1995',
+	@FiscalYear INT = 1995,
+	@LastYear INT = 2025,
+	@FirstLeapYearInPeriod INT = 1996
+
+/*******************************************************************************************************************************************************/
+
+DECLARE
+	@iTemp INT,
+	@LeapWeek INT,
+	@CurrentDate DATETIME,
+	@FiscalDayOfYear INT,
+	@FiscalWeekOfYear INT,
+	@FiscalMonth INT,
+	@FiscalQuarter INT,
+	@FiscalQuarterName VARCHAR(10),
+	@FiscalYearName VARCHAR(7),
+	@LeapYear INT,
+	@FiscalFirstDayOfYear DATE,
+	@FiscalFirstDayOfQuarter DATE,
+	@FiscalFirstDayOfMonth DATE,
+	@FiscalLastDayOfYear DATE,
+	@FiscalLastDayOfQuarter DATE,
+	@FiscalLastDayOfMonth DATE
+
+/*Holds the years that have 455 in last quarter*/
+DECLARE @LeapTable TABLE (leapyear INT)
+
+/*TABLE to contain the fiscal year calendar*/
+DECLARE @tb TABLE(
+	PeriodDate DATETIME,
+	[FiscalDayOfYear] VARCHAR(3),
+	[FiscalWeekOfYear] VARCHAR(3),
+	[FiscalMonth] VARCHAR(2), 
+	[FiscalQuarter] VARCHAR(1),
+	[FiscalQuarterName] VARCHAR(9),
+	[FiscalYear] VARCHAR(4),
+	[FiscalYearName] VARCHAR(7),
+	[FiscalMonthYear] VARCHAR(10),
+	[FiscalMMYYYY] VARCHAR(6),
+	[FiscalFirstDayOfMonth] DATE,
+	[FiscalLastDayOfMonth] DATE,
+	[FiscalFirstDayOfQuarter] DATE,
+	[FiscalLastDayOfQuarter] DATE,
+	[FiscalFirstDayOfYear] DATE,
+	[FiscalLastDayOfYear] DATE)
+
+/*Populate the table with all leap years*/
+SET @LeapYear = @FirstLeapYearInPeriod
+WHILE (@LeapYear < @LastYear)
+	BEGIN
+		INSERT INTO @leapTable VALUES (@LeapYear)
+		SET @LeapYear = @LeapYear + 5
+	END
+
+/*Initiate parameters before loop*/
+SET @CurrentDate = @dtFiscalYearStart
+SET @FiscalDayOfYear = 1
+SET @FiscalWeekOfYear = 1
+SET @FiscalMonth = 1
+SET @FiscalQuarter = 1
+SET @FiscalWeekOfYear = 1
+
+IF (EXISTS (SELECT * FROM @LeapTable WHERE @FiscalYear = leapyear))
+	BEGIN
+		SET @LeapWeek = 1
+	END
+	ELSE
+	BEGIN
+		SET @LeapWeek = 0
+	END
+
+/*******************************************************************************************************************************************************/
+
+/* Loop on days in interval*/
+WHILE (DATEPART(yy,@CurrentDate) <= @LastYear)
+BEGIN
+	
+/*SET fiscal Month*/
+	SELECT @FiscalMonth = CASE 
+		/*Use this section for a 4-5-4 calendar.  Every leap year the result will be a 4-5-5*/
+		WHEN @FiscalWeekOfYear BETWEEN 1 AND 4 THEN 1 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 5 AND 9 THEN 2 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 10 AND 13 THEN 3 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 14 AND 17 THEN 4 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 18 AND 22 THEN 5 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 23 AND 26 THEN 6 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 27 AND 30 THEN 7 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 31 AND 35 THEN 8 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 36 AND 39 THEN 9 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 40 AND 43 THEN 10 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 44 AND (48+@LeapWeek) THEN 11 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN (49+@LeapWeek) AND (52+@LeapWeek) THEN 12 /*4 weeks (5 weeks on leap year)*/
+		
+		/*Use this section for a 4-4-5 calendar.  Every leap year the result will be a 4-5-5*/
+		/*
+		WHEN @FiscalWeekOfYear BETWEEN 1 AND 4 THEN 1 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 5 AND 8 THEN 2 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 9 AND 13 THEN 3 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 14 AND 17 THEN 4 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 18 AND 21 THEN 5 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 22 AND 26 THEN 6 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 27 AND 30 THEN 7 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 31 AND 34 THEN 8 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 35 AND 39 THEN 9 /*5 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 40 AND 43 THEN 10 /*4 weeks*/
+		WHEN @FiscalWeekOfYear BETWEEN 44 AND (47+@leapWeek) THEN 11 /*4 weeks (5 weeks on leap year)*/
+		WHEN @FiscalWeekOfYear BETWEEN (48+@leapWeek) AND (52+@leapWeek) THEN 12 /*5 weeks*/
+		*/
+	END
+
+	/*SET Fiscal Quarter*/
+	SELECT @FiscalQuarter = CASE 
+		WHEN @FiscalMonth BETWEEN 1 AND 3 THEN 1
+		WHEN @FiscalMonth BETWEEN 4 AND 6 THEN 2
+		WHEN @FiscalMonth BETWEEN 7 AND 9 THEN 3
+		WHEN @FiscalMonth BETWEEN 10 AND 12 THEN 4
+	END
+	
+	SELECT @FiscalQuarterName = CASE 
+		WHEN @FiscalMonth BETWEEN 1 AND 3 THEN 'First'
+		WHEN @FiscalMonth BETWEEN 4 AND 6 THEN 'Second'
+		WHEN @FiscalMonth BETWEEN 7 AND 9 THEN 'Third'
+		WHEN @FiscalMonth BETWEEN 10 AND 12 THEN 'Fourth'
+	END
+	
+	/*Set Fiscal Year Name*/
+	SELECT @FiscalYearName = 'FY ' + CONVERT(VARCHAR, @FiscalYear)
+
+	INSERT INTO @tb (PeriodDate, FiscalDayOfYear, FiscalWeekOfYear, fiscalMonth, FiscalQuarter, FiscalQuarterName, FiscalYear, FiscalYearName) VALUES 
+	(@CurrentDate, @FiscalDayOfYear, @FiscalWeekOfYear, @FiscalMonth, @FiscalQuarter, @FiscalQuarterName, @FiscalYear, @FiscalYearName)
+
+	/*SET next day*/
+	SET @CurrentDate = DATEADD(dd, 1, @CurrentDate)
+	SET @FiscalDayOfYear = @FiscalDayOfYear + 1
+	SET @FiscalWeekOfYear = ((@FiscalDayOfYear-1) / 7) + 1
+
+
+	IF (@FiscalWeekOfYear > (52+@LeapWeek))
+	BEGIN
+		/*Reset a new year*/
+		SET @FiscalDayOfYear = 1
+		SET @FiscalWeekOfYear = 1
+		SET @FiscalYear = @FiscalYear + 1
+		IF ( EXISTS (SELECT * FROM @leapTable WHERE @FiscalYear = leapyear))
+		BEGIN
+			SET @LeapWeek = 1
+		END
+		ELSE
+		BEGIN
+			SET @LeapWeek = 0
+		END
+	END
+END
+
+/*******************************************************************************************************************************************************/
+
+/*Set first and last days of the fiscal months*/
+UPDATE @tb
+SET
+	FiscalFirstDayOfMonth = minmax.StartDate,
+	FiscalLastDayOfMonth = minmax.EndDate
+FROM
+@tb t,
+	(
+	SELECT FiscalMonth, FiscalQuarter, FiscalYear, MIN(PeriodDate) AS StartDate, MAX(PeriodDate) AS EndDate
+	FROM @tb
+	GROUP BY FiscalMonth, FiscalQuarter, FiscalYear
+	) minmax
+WHERE
+	t.FiscalMonth = minmax.FiscalMonth AND
+	t.FiscalQuarter = minmax.FiscalQuarter AND
+	t.FiscalYear = minmax.FiscalYear 
+
+/*Set first and last days of the fiscal quarters*/
+UPDATE @tb
+SET
+	FiscalFirstDayOfQuarter = minmax.StartDate,
+	FiscalLastDayOfQuarter = minmax.EndDate
+FROM
+@tb t,
+	(
+	SELECT FiscalQuarter, FiscalYear, min(PeriodDate) as StartDate, max(PeriodDate) as EndDate
+	FROM @tb
+	GROUP BY FiscalQuarter, FiscalYear
+	) minmax
+WHERE
+	t.FiscalQuarter = minmax.FiscalQuarter AND
+	t.FiscalYear = minmax.FiscalYear 
+
+/*Set first and last days of the fiscal years*/
+UPDATE @tb
+SET
+	FiscalFirstDayOfYear = minmax.StartDate,
+	FiscalLastDayOfYear = minmax.EndDate
+FROM
+@tb t,
+	(
+	SELECT FiscalYear, min(PeriodDate) as StartDate, max(PeriodDate) as EndDate
+	FROM @tb
+	GROUP BY FiscalYear
+	) minmax
+WHERE
+	t.FiscalYear = minmax.FiscalYear 
+
+/*Set FiscalYearMonth*/
+UPDATE @tb
+SET
+	FiscalMonthYear = 
+		CASE FiscalMonth
+		WHEN 1 THEN 'Jan'
+		WHEN 2 THEN 'Feb'
+		WHEN 3 THEN 'Mar'
+		WHEN 4 THEN 'Apr'
+		WHEN 5 THEN 'May'
+		WHEN 6 THEN 'Jun'
+		WHEN 7 THEN 'Jul'
+		WHEN 8 THEN 'Aug'
+		WHEN 9 THEN 'Sep'
+		WHEN 10 THEN 'Oct'
+		WHEN 11 THEN 'Nov'
+		WHEN 12 THEN 'Dec'
+		END + '-' + CONVERT(VARCHAR, FiscalYear)
+
+/*Set FiscalMMYYYY*/
+UPDATE @tb
+SET
+	FiscalMMYYYY = RIGHT('0' + CONVERT(VARCHAR, FiscalMonth),2) + CONVERT(VARCHAR, FiscalYear)
+
+/*******************************************************************************************************************************************************/
+
+UPDATE [dbo].[datedimension]
+	SET
+	FiscalDayOfYear = a.FiscalDayOfYear
+	, FiscalWeekOfYear = a.FiscalWeekOfYear
+	, FiscalMonth = a.FiscalMonth
+	, FiscalQuarter = a.FiscalQuarter
+	, FiscalQuarterName = a.FiscalQuarterName
+	, FiscalYear = a.FiscalYear
+	, FiscalYearName = a.FiscalYearName
+	, FiscalMonthYear = a.FiscalMonthYear
+	, FiscalMMYYYY = a.FiscalMMYYYY
+	, FiscalFirstDayOfMonth = a.FiscalFirstDayOfMonth
+	, FiscalLastDayOfMonth = a.FiscalLastDayOfMonth
+	, FiscalFirstDayOfQuarter = a.FiscalFirstDayOfQuarter
+	, FiscalLastDayOfQuarter = a.FiscalLastDayOfQuarter
+	, FiscalFirstDayOfYear = a.FiscalFirstDayOfYear
+	, FiscalLastDayOfYear = a.FiscalLastDayOfYear
+FROM @tb a
+	INNER JOIN [dbo].[datedimension] b ON a.PeriodDate = b.[Date]
+
+/*******************************************************************************************************************************************************/
+--END DATE DIMENSION
+/*******************************************************************************************************************************************************/
+
+
 
 
 /*******************************************************************************************************************************************************/
 --CREATE TIME DIMENSION
 /*******************************************************************************************************************************************************/
-DROP TABLE IF EXISTS [dbo].[TimeDimension]
+
 
 CREATE TABLE [dbo].[TimeDimension](
 	[TimeKey] [int] NOT NULL,
@@ -549,17 +907,6 @@ Go
 
 Exec [FillTimeDimension]
 go
-
-select * from TimeDimension --where MinuteNumber =59 and SecondNumber =59
-
-
-
-
-
-
-
-
-
 
 /*******************************************************************************************************************************************************/
 --GET ALL THE TABLE DATA
