@@ -43,10 +43,11 @@ DECLARE @lastinitial CHAR(1)
 SET @loopincrement = 0
 SET @firstinitial = ''
 SET @lastinitial = ''
-DECLARE @start DATETIME = '19230101'
-DECLARE @end DATETIME = '20170201'
+DECLARE @start  DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-36135), 0) --previous 99 years
+DECLARE @end DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-6570), 0)-- starting at 18 so it's only adults
 DECLARE @gap INT = DATEDIFF(DD,@start,@end)
 DECLARE @dateModified Date = '01/01/01'
+
 
 WHILE @loopincrement < 5000
 BEGIN 
@@ -54,7 +55,7 @@ SET @loopincrement = @loopincrement +1
 SET @firstinitial = CHAR(cast((90 - 65) * rand() + 65 AS INTEGER)) 
 SET @lastinitial = CHAR(cast((90 - 65) * rand() + 65 AS INTEGER)) 
 SET @dateModified = DATEADD(DD,@gap*RAND(),@start)
-PRINT CONVERT(VARCHAR(5),@loopincrement)+' '+@lastinitial+', '+ @firstinitial +' ' +CONVERT(VArchar(10),@datemodified)
+PRINT CONVERT(VARCHAR(5),@loopincrement)+' '+@lastinitial+', '+ @firstinitial +' ' +CONVERT(VArchar(10),@datemodified) 
 --PRINT @firstinitial
 INSERT INTO dbo.person (lastinitial, firstinitial, DOB)
 VALUES (@lastinitial, @firstinitial, @dateModified)
@@ -75,20 +76,26 @@ startdate date,
 starttime time
 )
 /*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
 --Create Visit Info Table
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
 
 CREATE TABLE 
 visitinfo 
 (visitid int identity (1000000,1) not null primary key, 
 personid int,
+visitdrg int,
 visitstartdatetime datetime, 
-visitenddatetime datetime)
+visitenddatetime datetime
+)
 
 
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
 --CREATE DATE DIMENSION
 /*******************************************************************************************************************************************************/
-
-
+/*******************************************************************************************************************************************************/
 
 CREATE TABLE	[dbo].[datedimension]
 	(	[DateKey] INT primary key, 
@@ -132,14 +139,14 @@ GO
 
 
 /********************************************************************************************/
---Specify Start Date and End date here
---Value of Start Date Must be Less than Your End Date 
 --This sets up the table boundaries.  
 --The @startdate is Jan 1 of the previous year and this is maintained by the -365.  If you only want this year set it to 0
- --The @enddate is Jan 1 two years into the future this is the +720  Reducing this will get you into other years as desired
+--The @enddate is Jan 1 two years into the future this is the +720  Reducing this will get you into other years as desired
 
-DECLARE @StartDate DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-365), 0) --Starting value of Date Range Jan 1 the year prior to this one
-DECLARE @EndDate DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()+720), 365) --End Value of Date Range Jan 1 2 years in the future
+DECLARE @StartDate DATETIME 
+SET @StartDate = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-365), 0) --Starting value of Date Range Jan 1 the year prior to this one
+DECLARE @EndDate DATETIME 
+SET @EndDate = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()+720), 365) --End Value of Date Range Jan 1 2 years in the future
 
 --Temporary Variables To Hold the Values During Processing of Each Date of Year
 DECLARE
@@ -307,41 +314,41 @@ END
 
 /*Add HOLIDAYS UK*/
 	
--- Good Friday  April 18 
-	UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Good Friday'
-	WHERE [Month] = 4 AND [DayOfMonth]  = 18
--- Easter Monday  April 21 
-	UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Easter Monday'
-	WHERE [Month] = 4 AND [DayOfMonth]  = 21
--- Early May Bank Holiday   May 5 
-   UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Early May Bank Holiday'
-	WHERE [Month] = 5 AND [DayOfMonth]  = 5
--- Spring Bank Holiday  May 26 
-	UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Spring Bank Holiday'
-	WHERE [Month] = 5 AND [DayOfMonth]  = 26
--- Summer Bank Holiday  August 25 
-    UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Summer Bank Holiday'
-	WHERE [Month] = 8 AND [DayOfMonth]  = 25
--- Boxing Day  December 26  	
-    UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Boxing Day'
-	WHERE [Month] = 12 AND [DayOfMonth]  = 26	
---CHRISTMAS
-	UPDATE [dbo].[datedimension]
-		SET HolidayUK = 'Christmas Day'
-	WHERE [Month] = 12 AND [DayOfMonth]  = 25
---New Years Day
-	UPDATE [dbo].[datedimension]
-		SET HolidayUK  = 'New Year''s Day'
-	WHERE [Month] = 1 AND [DayOfMonth] = 1
+-- Good Friday  April 18 --	UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Good Friday'
+--	WHERE [Month] = 4 AND [DayOfMonth]  = 18
+---- Easter Monday  April 21 
+--	UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Easter Monday'
+--	WHERE [Month] = 4 AND [DayOfMonth]  = 21
+---- Early May Bank Holiday   May 5 
+--   UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Early May Bank Holiday'
+--	WHERE [Month] = 5 AND [DayOfMonth]  = 5
+---- Spring Bank Holiday  May 26 
+--	UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Spring Bank Holiday'
+--	WHERE [Month] = 5 AND [DayOfMonth]  = 26
+---- Summer Bank Holiday  August 25 
+--    UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Summer Bank Holiday'
+--	WHERE [Month] = 8 AND [DayOfMonth]  = 25
+---- Boxing Day  December 26  	
+--    UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Boxing Day'
+--	WHERE [Month] = 12 AND [DayOfMonth]  = 26	
+----CHRISTMAS
+--	UPDATE [dbo].[datedimension]
+--		SET HolidayUK = 'Christmas Day'
+--	WHERE [Month] = 12 AND [DayOfMonth]  = 25
+----New Years Day
+--	UPDATE [dbo].[datedimension]
+--		SET HolidayUK  = 'New Year''s Day'
+--	WHERE [Month] = 1 AND [DayOfMonth] = 1
 	
-	UPDATE [dbo].[datedimension] 
-	SET IsHolidayUK = CASE WHEN HolidayUK IS NULL THEN 0 WHEN HolidayUK IS NOT NULL THEN 1 END 
+--	UPDATE [dbo].[datedimension] 
+--	SET IsHolidayUK = CASE WHEN HolidayUK IS NULL THEN 0 WHEN HolidayUK IS NOT NULL THEN 1 END 
+
 
 
 	/*Add HOLIDAYS USA*/
@@ -528,11 +535,11 @@ END
 
 
 
-
+/*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 --CREATE TIME DIMENSION
 /*******************************************************************************************************************************************************/
-
+/*******************************************************************************************************************************************************/
 
 CREATE TABLE [dbo].[TimeDimension](
 	[TimeKey] [int] NOT NULL,
@@ -687,6 +694,12 @@ Go
 
 Exec [FillTimeDimension]
 go
+
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+--END TIME DIMENSION
+
+
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
@@ -700,10 +713,9 @@ go
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
---GET ALL THE TABLE DATA
+--GET ALL THE TABLE DATA for audit
 
 SELECT COUNT(*) as VisitCount FROM [dbo].[visitinfo]
-SELECT COUNT(*) as personcount FROM [dbo].[person]
 SELECT COUNT(*) as orderscount FROM [dbo].[orders]
 
 SELECT COUNT(*) as datecount FROM [dbo].[datedimension]
