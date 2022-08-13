@@ -1,3 +1,5 @@
+USE healthcare
+
 DROP TABLE IF EXISTS [DateTable]
 
 

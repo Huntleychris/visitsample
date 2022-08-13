@@ -1,3 +1,5 @@
+USE healthcare
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -43,7 +45,8 @@ DECLARE @lastinitial CHAR(1)
 SET @loopincrement = 0
 SET @firstinitial = ''
 SET @lastinitial = ''
-DECLARE @start  DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-36135), 0) --previous 99 years
+
+DECLARE @start DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-36135), 0) --previous 99 years
 DECLARE @end DATETIME = DATEADD(yy, DATEDIFF(yy, 0, GETDATE()-6570), 0)-- starting at 18 so it's only adults
 DECLARE @gap INT = DATEDIFF(DD,@start,@end)
 DECLARE @dateModified Date = '01/01/01'
@@ -55,7 +58,7 @@ SET @loopincrement = @loopincrement +1
 SET @firstinitial = CHAR(cast((90 - 65) * rand() + 65 AS INTEGER)) 
 SET @lastinitial = CHAR(cast((90 - 65) * rand() + 65 AS INTEGER)) 
 SET @dateModified = DATEADD(DD,@gap*RAND(),@start)
-PRINT CONVERT(VARCHAR(5),@loopincrement)+' '+@lastinitial+', '+ @firstinitial +' ' +CONVERT(VArchar(10),@datemodified) 
+PRINT CONVERT(VARCHAR(5),@loopincrement)+' '+@lastinitial+', '+ @firstinitial +' ' +CONVERT(Varchar(10),@datemodified) 
 --PRINT @firstinitial
 INSERT INTO dbo.person (lastinitial, firstinitial, DOB)
 VALUES (@lastinitial, @firstinitial, @dateModified)
