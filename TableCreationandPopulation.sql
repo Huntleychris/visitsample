@@ -95,7 +95,9 @@ visitstartdatetime datetime,
 visitenddatetime datetime,
 LOS decimal(3,2),
 dateonly date,
-timeonly time)
+timeonly time,
+dischargedate date,
+dischargetime time)
 
 -- ADD IN FOREIGN KEY RELATIONSHIP
 
@@ -226,18 +228,24 @@ SELECT @counterend = MAX(visitid) FROM #tempvisit2
 DECLARE @los decimal (3,2)
 DECLARE @visitstartdate DATE
 DECLARE @visitstarttime TIME
+DECLARE @visitenddate DATE
+DECLARE @visitendtime TIME
 
 WHILE @counter <= @counterend
 BEGIN
 SELECT @LOS = CAST(ROUND(SUM(DATEDIFF(ss,visitstartdatetime,visitenddatetime)/86400.0),2) as decimal (3,2)) FROM visitinfo where @counter = visitid
 SELECT @visitstartdate = CONVERT(DATE,[visitstartdatetime]) FROM visitinfo where @counter = visitid
 SELECT @visitstarttime = CONVERT(TIME(0),[visitstartdatetime]) FROM visitinfo  where @counter = visitid
+SELECT @visitenddate = CONVERT(DATE,[visitenddatetime]) FROM visitinfo where @counter = visitid
+SELECT @visitendtime = CONVERT(TIME(0),[visitenddatetime]) FROM visitinfo  where @counter = visitid
 UPDATE 
 visitinfo
 SET
 los = @los,
 dateonly = @visitstartdate,
-timeonly = @visitstarttime
+timeonly = @visitstarttime,
+dischargedate = @visitenddate,
+dischargetime = @visitendtime 
 WHERE visitid = @counter
 
 SET @counter = @counter + 1
@@ -882,5 +890,5 @@ SELECT TOP 10 * FROM [dbo].[person]
 SELECT COUNT(*) as numberofpeople FROM [dbo].[person]
 
 
-SELECT top 1000 *,CAST(ROUND(SUM(DATEDIFF(ss,visitstartdatetime,visitenddatetime)/86400.0),2) as decimal (3,2)) as los2 FROM visitinfo GROUP BY visitid, personid, visitstartdatetime, visitenddatetime, LOS, dateonly, timeonly
+SELECT top 1000 *,CAST(ROUND(SUM(DATEDIFF(ss,visitstartdatetime,visitenddatetime)/86400.0),2) as decimal (3,2)) as los2 FROM visitinfo GROUP BY visitid, personid, visitstartdatetime, visitenddatetime, LOS, dateonly, timeonly, dischargedate, dischargetime
 SELECT * FROM visitinfo 
