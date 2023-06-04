@@ -11,8 +11,6 @@ GO
 
 --PREP AND CLEANUP
 
-DROP TABLE IF EXISTS [dbo].[datedimension]
-DROP TABLE IF EXISTS [dbo].[TimeDimension]
 DROP PROC IF EXISTS [dbo].[FillDateDimension]
 DROP PROC IF EXISTS [dbo].[FillTimeDimension]
 DROP TABLE IF EXISTS [dbo].[visitinfo]
@@ -21,6 +19,10 @@ DROP TABLE IF EXISTS [dbo].[person]
 DROP TABLE IF EXISTS [dbo].[visitinfo]
 DROP TABLE IF EXISTS #tempvisit
 DROP TABLE IF EXISTS #tempvisit2 
+DROP TABLE IF EXISTS [dbo].[datedimension]
+DROP TABLE IF EXISTS [dbo].[TimeDimension]
+
+GO
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 --TABLE CREATION AREA
@@ -104,7 +106,7 @@ dischargetime time)
 -- ADD IN FOREIGN KEY RELATIONSHIP
 
 ALTER TABLE [dbo].visitinfo     
-ADD CONSTRAINT FK_Product_ProductCategoryID FOREIGN KEY (personid)     
+ADD CONSTRAINT FK_personid FOREIGN KEY (personid)     
     REFERENCES [dbo].[Person] (personid)     
     ON DELETE CASCADE    
     ON UPDATE CASCADE  
@@ -262,7 +264,7 @@ END
 
 CREATE TABLE	[dbo].[datedimension]
 	(	[DateKey] INT primary key, 
-		[Date] DATETIME,
+		[Date] DATE NOT NULL UNIQUE,
 		[FullDateUK] CHAR(10), -- Date in dd-MM-yyyy format
 		[FullDateUSA] CHAR(10),-- Date in MM-dd-yyyy format
 		[DayOfMonth] VARCHAR(2), -- Field will hold day number of Month
@@ -294,9 +296,10 @@ CREATE TABLE	[dbo].[datedimension]
 		[LastDayOfYear] DATE,
 		[IsHolidayUSA] BIT,-- Flag 1=National Holiday, 0-No National Holiday
 		[IsWeekday] BIT,-- 0=Week End ,1=Week Day
-		[HolidayUSA] VARCHAR(50),--Name of Holiday in US
-		[IsHolidayUK] BIT Null, -- Flag 1=National Holiday, 0-No National Holiday
-		[HolidayUK] VARCHAR(50) Null --Name of Holiday in UK
+		[HolidayUSA] VARCHAR(50)
+		,--Name of Holiday in US
+		[IsHolidayNonUS] BIT Null, -- Flag 1=National Holiday, 0-No National Holiday
+		[HolidayNonUS] VARCHAR(50) Null --Name of Holiday
 	)
 GO
 
@@ -474,45 +477,6 @@ BEGIN
 
 	SET @CurrentDate = DATEADD(DD, 1, @CurrentDate)
 END
-
-/*Add HOLIDAYS UK*/
-	
--- Good Friday  April 18 --	UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Good Friday'
---	WHERE [Month] = 4 AND [DayOfMonth]  = 18
----- Easter Monday  April 21 
---	UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Easter Monday'
---	WHERE [Month] = 4 AND [DayOfMonth]  = 21
----- Early May Bank Holiday   May 5 
---   UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Early May Bank Holiday'
---	WHERE [Month] = 5 AND [DayOfMonth]  = 5
----- Spring Bank Holiday  May 26 
---	UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Spring Bank Holiday'
---	WHERE [Month] = 5 AND [DayOfMonth]  = 26
----- Summer Bank Holiday  August 25 
---    UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Summer Bank Holiday'
---	WHERE [Month] = 8 AND [DayOfMonth]  = 25
----- Boxing Day  December 26  	
---    UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Boxing Day'
---	WHERE [Month] = 12 AND [DayOfMonth]  = 26	
-----CHRISTMAS
---	UPDATE [dbo].[datedimension]
---		SET HolidayUK = 'Christmas Day'
---	WHERE [Month] = 12 AND [DayOfMonth]  = 25
-----New Years Day
---	UPDATE [dbo].[datedimension]
---		SET HolidayUK  = 'New Year''s Day'
---	WHERE [Month] = 1 AND [DayOfMonth] = 1
-	
---	UPDATE [dbo].[datedimension] 
---	SET IsHolidayUK = CASE WHEN HolidayUK IS NULL THEN 0 WHEN HolidayUK IS NOT NULL THEN 1 END 
-
-
 
 	/*Add HOLIDAYS USA*/
 	/*THANKSGIVING - Fourth THURSDAY in November*/
@@ -707,7 +671,7 @@ END
 CREATE TABLE [dbo].[TimeDimension](
 	[TimeKey] [int] NOT NULL,
 	[TimeAltKey] [int] NOT NULL,
-	[Time30] time NOT NULL,
+	[Time30] time  NOT NULL UNIQUE,
 	[Hour30] [tinyint] NOT NULL,
 	[MinuteNumber] [tinyint] NOT NULL,
 	[SecondNumber] [tinyint] NOT NULL,
@@ -890,17 +854,28 @@ END
 /*************************************          Relationships          *******************************************************************************/
 /*******************************************************************************************************************************************************/
 
---ALTER TABLE [dbo].timedimension   
---ADD CONSTRAINT FK_ordertime FOREIGN KEY (timekey)     
---    REFERENCES [dbo].[orders] (startdate)     
---    ON DELETE CASCADE    
---    ON UPDATE CASCADE  
+ALTER TABLE [dbo].orders   
+ADD CONSTRAINT FK_ordertime FOREIGN KEY (starttime)     
+    REFERENCES [dbo].[timedimension] (time30)     
+    ON DELETE CASCADE    
+    ON UPDATE CASCADE  
 
---ALTER TABLE [dbo].timedimension   
---ADD CONSTRAINT FK_admissiontime FOREIGN KEY (timekey)     
---    REFERENCES [dbo].[visitinfo] (admissiontimeonly)     
---    ON DELETE CASCADE    
---    ON UPDATE CASCADE  
+ALTER TABLE [dbo].[visitinfo]   
+ADD CONSTRAINT FK_admissiontime FOREIGN KEY (admissiontimeonly)     
+    REFERENCES [dbo].[timedimension] (time30)     
+    ON DELETE CASCADE    
+    ON UPDATE CASCADE  
+
+ALTER TABLE [dbo].[visitinfo]   
+ADD CONSTRAINT FK_admissiondate FOREIGN KEY (admissiondateonly)     
+    REFERENCES [dbo].[datedimension] (date)     
+ 
+
+ALTER TABLE [dbo].[visitinfo]   
+ADD CONSTRAINT FK_dischargedate FOREIGN KEY (dischargedate)     
+    REFERENCES [dbo].[datedimension] (date)     
+    ON DELETE CASCADE    
+    ON UPDATE CASCADE  
 
 
 	
