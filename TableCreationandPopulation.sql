@@ -81,6 +81,8 @@ ordertype varchar(100),
 startdate date,
 starttime time
 )
+
+
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 --Create Visit Info Table
@@ -94,8 +96,8 @@ personid int,
 visitstartdatetime datetime, 
 visitenddatetime datetime,
 LOS decimal(3,2),
-dateonly date,
-timeonly time,
+admissiondateonly date,
+admissiontimeonly time,
 dischargedate date,
 dischargetime time)
 
@@ -242,8 +244,8 @@ UPDATE
 visitinfo
 SET
 los = @los,
-dateonly = @visitstartdate,
-timeonly = @visitstarttime,
+admissiondateonly = @visitstartdate,
+admissiontimeonly = @visitstarttime,
 dischargedate = @visitenddate,
 dischargetime = @visitendtime 
 WHERE visitid = @counter
@@ -705,7 +707,7 @@ END
 CREATE TABLE [dbo].[TimeDimension](
 	[TimeKey] [int] NOT NULL,
 	[TimeAltKey] [int] NOT NULL,
-	[Time30] [varchar](8) NOT NULL,
+	[Time30] time NOT NULL,
 	[Hour30] [tinyint] NOT NULL,
 	[MinuteNumber] [tinyint] NOT NULL,
 	[SecondNumber] [tinyint] NOT NULL,
@@ -860,6 +862,51 @@ go
 /*******************************************************************************************************************************************************/
 --END TIME DIMENSION
 
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+--Populate Orders Table
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+
+DECLARE @loopstart int 
+SET @loopstart = (SELECT MIN(Personid) from person)
+DECLARE @loopend int
+SET @loopend = (SELECT MAX(Personid) from person)
+
+WHILE @loopstart<=@loopend
+BEGIN
+INSERT INTO orders (personid, ordertype, startdate, starttime)
+SELECT @loopstart, 'admission', admissiondateonly, admissiontimeonly FROM visitinfo WHERE personid = @loopstart
+INSERT INTO orders (personid, ordertype, startdate, starttime)
+SELECT @loopstart, 'discharge', dischargedate, dischargetime FROM visitinfo WHERE personid = @loopstart
+
+SET @loopstart = @loopstart+1
+END
+
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+/*************************************          Relationships          *******************************************************************************/
+/*******************************************************************************************************************************************************/
+
+--ALTER TABLE [dbo].timedimension   
+--ADD CONSTRAINT FK_ordertime FOREIGN KEY (timekey)     
+--    REFERENCES [dbo].[orders] (startdate)     
+--    ON DELETE CASCADE    
+--    ON UPDATE CASCADE  
+
+--ALTER TABLE [dbo].timedimension   
+--ADD CONSTRAINT FK_admissiontime FOREIGN KEY (timekey)     
+--    REFERENCES [dbo].[visitinfo] (admissiontimeonly)     
+--    ON DELETE CASCADE    
+--    ON UPDATE CASCADE  
+
+
+	
+/*******************************************************************************************************************************************************/
+/*******************************************************************************************************************************************************/
+
 
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
@@ -878,6 +925,8 @@ go
 
 SELECT COUNT(*) as VisitCount FROM [dbo].[visitinfo]
 SELECT COUNT(*) as orderscount FROM [dbo].[orders]
+SELECT top 10 * FROM orders where ordertype = 'admission'
+SELECT top 10 * FROM orders where ordertype = 'discharge'
 
 SELECT COUNT(*) as datecount FROM [dbo].[datedimension]
 SELECT * FROM [dbo].[datedimension] WHERE DateKey=(SELECT min(DateKey) FROM [dbo].[datedimension]);
@@ -890,5 +939,5 @@ SELECT TOP 10 * FROM [dbo].[person]
 SELECT COUNT(*) as numberofpeople FROM [dbo].[person]
 
 
-SELECT top 1000 *,CAST(ROUND(SUM(DATEDIFF(ss,visitstartdatetime,visitenddatetime)/86400.0),2) as decimal (3,2)) as los2 FROM visitinfo GROUP BY visitid, personid, visitstartdatetime, visitenddatetime, LOS, dateonly, timeonly, dischargedate, dischargetime
+SELECT top 1000 *,CAST(ROUND(SUM(DATEDIFF(ss,visitstartdatetime,visitenddatetime)/86400.0),2) as decimal (3,2)) as los2 FROM visitinfo GROUP BY visitid, personid, visitstartdatetime, visitenddatetime, LOS, admissiondateonly, admissiontimeonly, dischargedate, dischargetime
 SELECT * FROM visitinfo 
