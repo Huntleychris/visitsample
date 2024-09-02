@@ -847,6 +847,15 @@ SELECT @loopstart, 'discharge', dischargedate, dischargetime FROM visitinfo WHER
 SET @loopstart = @loopstart+1
 END
 
+UPDATE orders
+SET starttime = CASE
+    WHEN CONVERT(TIME, starttime) BETWEEN '07:00:00' AND '11:00:00' THEN 
+        DATEADD(MINUTE, -1 * (120 + FLOOR(RAND(CHECKSUM(NEWID())) * (280 - 120))), starttime)
+    ELSE
+        DATEADD(MINUTE, -1 * (15 + FLOOR(RAND(CHECKSUM(NEWID())) * (80 - 15))), starttime)
+END;
+
+
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
