@@ -1,3 +1,10 @@
+IF EXISTS (SELECT * FROM sys.databases WHERE name = 'healthcare')
+BEGIN
+    DROP DATABASE healthcare;
+END
+
+Create database healthcare;
+
 USE healthcare
 
 SET ANSI_NULLS ON
