@@ -1,9 +1,3 @@
-IF EXISTS (SELECT * FROM sys.databases WHERE name = 'healthcare')
-BEGIN
-    DROP DATABASE healthcare;
-END
-
-Create database healthcare;
 
 USE healthcare
 
@@ -262,6 +256,20 @@ WHERE visitid = @counter
 SET @counter = @counter + 1
 END
 
+
+UPDATE visitinfo
+SET dischargetime = CASE
+    WHEN DATEPART(HOUR, dischargetime) BETWEEN 22 AND 23 OR (DATEPART(HOUR, dischargetime) = 0 AND DATEPART(MINUTE, dischargetime) = 0) THEN
+        DATEADD(HOUR, -4, dischargetime)
+    WHEN DATEPART(HOUR, dischargetime) BETWEEN 0 AND 2 THEN
+        DATEADD(HOUR, 3, dischargetime)
+    WHEN DATEPART(HOUR, dischargetime) BETWEEN 4 AND 5 THEN
+        DATEADD(HOUR, 2, dischargetime)
+    WHEN DATEPART(HOUR, dischargetime) BETWEEN 6 AND 7 THEN
+        DATEADD(HOUR, 1, dischargetime)
+    ELSE
+        dischargetime
+    END;
 
 /*******************************************************************************************************************************************************/
 /*******************************************************************************************************************************************************/
